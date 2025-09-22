@@ -1,0 +1,78 @@
+name: Recompress FFmpeg Builds
+
+on:
+  push:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+jobs:
+  recompress:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Install required software
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y p7zip-full jq curl unzip xz-utils tar
+
+      - name: Get latest FFmpeg release info
+        id: get_release
+        run: |
+          latest=$(curl -s https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/tags/latest)
+          tag=$(echo "$latest" | jq -r .tag_name)
+          title=$(echo "$latest" | jq -r .name)
+
+          linux_url=$(echo "$latest" | jq -r '.assets[] | select(.name == "ffmpeg-master-latest-linux64-gpl.tar.xz") | .browser_download_url')
+          win_url=$(echo "$latest" | jq -r '.assets[] | select(.name == "ffmpeg-master-latest-win64-gpl.zip") | .browser_download_url')
+
+          echo "tag=$tag" >> $GITHUB_OUTPUT
+          echo "title=$title" >> $GITHUB_OUTPUT
+          echo "linux_url=$linux_url" >> $GITHUB_OUTPUT
+          echo "win_url=$win_url" >> $GITHUB_OUTPUT
+
+      - name: Check if release already exists
+        id: check_release
+        run: |
+          existing=$(curl -s \
+            -H "Authorization: token ${{ vars.PAT_TOKEN }}" \
+            https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ steps.get_release.outputs.tag }})
+          if echo "$existing" | grep -q '"id":'; then
+            echo "already_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "already_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download, recompress builds
+        if: steps.check_release.outputs.already_exists == 'false'
+        run: |
+          tag="${{ steps.get_release.outputs.tag }}"
+
+          # Linux build
+          curl -L -o ffmpeg-linux.tar.xz "${{ steps.get_release.outputs.linux_url }}"
+          mkdir ffmpeg-linux
+          tar -xJf ffmpeg-linux.tar.xz -C ffmpeg-linux
+          7z a -t7z -mx=9 "ffmpeg-master-latest-linux64-gpl.7z" ./ffmpeg-linux/*
+
+          # Windows build
+          curl -L -o ffmpeg-win.zip "${{ steps.get_release.outputs.win_url }}"
+          unzip ffmpeg-win.zip -d ffmpeg-win
+          7z a -t7z -mx=9 "ffmpeg-master-latest-win64-gpl.7z" ./ffmpeg-win/*
+
+      - name: Create new release
+        if: steps.check_release.outputs.already_exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_release.outputs.tag }}
+          name: "${{ steps.get_release.outputs.title }} recompressed"
+          body: "Recompressed from the original release at https://github.com/BtbN/FFmpeg-Builds/releases/tag/${{ steps.get_release.outputs.tag }}"
+          draft: false
+          prerelease: false
+          files: |
+            ffmpeg-master-latest-linux64-gpl.7z
+            ffmpeg-master-latest-win64-gpl.7z
+        env:
+          GITHUB_TOKEN: ${{ vars.PAT_TOKEN }}
