@@ -22,12 +22,15 @@ jobs:
       - name: Get latest FFmpeg release info
         id: get_release
         run: |
-          latest=$(curl -s https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/tags/latest)
-          tag=$(echo "$latest" | jq -r .tag_name)
-          title=$(echo "$latest" | jq -r .name)
+          release=$(curl -s https://api.github.com/repos/BtbN/FFmpeg-Builds/releases | jq '.[0]')
 
-          linux_url=$(echo "$latest" | jq -r '.assets[] | select(.name == "ffmpeg-master-latest-linux64-gpl.tar.xz") | .browser_download_url')
-          win_url=$(echo "$latest" | jq -r '.assets[] | select(.name == "ffmpeg-master-latest-win64-gpl.zip") | .browser_download_url')
+          # Original tag is "latest", but we reconstruct the autobuild tag
+          published=$(echo "$release" | jq -r .published_at)
+          tag=$(date -u -d "$published" "+autobuild-%Y-%m-%d-%H-%M")
+          title=$(echo "$release" | jq -r .name)
+
+          linux_url=$(echo "$release" | jq -r '.assets[] | select(.name == "ffmpeg-master-latest-linux64-gpl.tar.xz") | .browser_download_url')
+          win_url=$(echo "$release" | jq -r '.assets[] | select(.name == "ffmpeg-master-latest-win64-gpl.zip") | .browser_download_url')
 
           echo "tag=$tag" >> $GITHUB_OUTPUT
           echo "title=$title" >> $GITHUB_OUTPUT
@@ -55,12 +58,12 @@ jobs:
           curl -L -o ffmpeg-linux.tar.xz "${{ steps.get_release.outputs.linux_url }}"
           mkdir ffmpeg-linux
           tar -xJf ffmpeg-linux.tar.xz -C ffmpeg-linux
-          7z a -t7z -mx=9 "ffmpeg-master-latest-linux64-gpl.7z" ./ffmpeg-linux/*
+          7z a -t7z -mx=9 "ffmpeg-master-${tag}-linux64-gpl.7z" ./ffmpeg-linux/*
 
           # Windows build
           curl -L -o ffmpeg-win.zip "${{ steps.get_release.outputs.win_url }}"
           unzip ffmpeg-win.zip -d ffmpeg-win
-          7z a -t7z -mx=9 "ffmpeg-master-latest-win64-gpl.7z" ./ffmpeg-win/*
+          7z a -t7z -mx=9 "ffmpeg-master-${tag}-win64-gpl.7z" ./ffmpeg-win/*
 
       - name: Create new release
         if: steps.check_release.outputs.already_exists == 'false'
@@ -72,7 +75,7 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            ffmpeg-master-latest-linux64-gpl.7z
-            ffmpeg-master-latest-win64-gpl.7z
+            ffmpeg-master-${{ steps.get_release.outputs.tag }}-linux64-gpl.7z
+            ffmpeg-master-${{ steps.get_release.outputs.tag }}-win64-gpl.7z
         env:
           GITHUB_TOKEN: ${{ vars.PAT_TOKEN }}
