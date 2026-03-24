@@ -101,8 +101,9 @@ jobs:
           files: |
             ffmpeg-master-${{ steps.get_release.outputs.tag }}-linux64-gpl-binary
             ffmpeg-master-${{ steps.get_release.outputs.tag }}-win64-gpl-binary.exe
-        env:
-          GITHUB_TOKEN: ${{ vars.PAT_TOKEN }}
+          token: ${{ vars.PAT_TOKEN }}
+        # env:
+        #   GITHUB_TOKEN: ${{ vars.PAT_TOKEN }}
 
   compress_linux:
     runs-on: ubuntu-latest
@@ -139,8 +140,9 @@ jobs:
           files: |
             ffmpeg-master-${{ needs.create_release.outputs.tag }}-linux64-gpl.7z
             ffmpeg-master-${{ needs.create_release.outputs.tag }}-linux64-gpl-upx
-        env:
-          GITHUB_TOKEN: ${{ vars.PAT_TOKEN }}
+          token: ${{ vars.PAT_TOKEN }}
+        # env:
+        #   GITHUB_TOKEN: ${{ vars.PAT_TOKEN }}
 
   compress_windows:
     runs-on: ubuntu-latest
@@ -176,5 +178,6 @@ jobs:
           files: |
             ffmpeg-master-${{ needs.create_release.outputs.tag }}-win64-gpl.7z
             ffmpeg-master-${{ needs.create_release.outputs.tag }}-win64-gpl-upx.exe
-        env:
-          GITHUB_TOKEN: ${{ vars.PAT_TOKEN }}
+          token: ${{ vars.PAT_TOKEN }}
+        # env:
+        #   GITHUB_TOKEN: ${{ vars.PAT_TOKEN }}
