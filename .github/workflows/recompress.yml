@@ -17,7 +17,7 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Install required software
         run: |
@@ -27,7 +27,12 @@ jobs:
       - name: Get latest FFmpeg release info
         id: get_release
         run: |
-          release=$(curl -s https://api.github.com/repos/BtbN/FFmpeg-Builds/releases | jq '.[0]')
+          set -euo pipefail
+          response=$(curl -sS https://api.github.com/repos/FFmpeg-Builds/FFmpeg-Builds/releases)
+          # ID-based path: https://api.github.com/repositories/292087234/releases
+          echo "$response" | jq -e 'type == "array"' > /dev/null \
+            || { echo "Unexpected API response:"; echo "$response"; exit 1; }
+          release=$(echo "$response" | jq '.[0]')
 
           # Original tag is "latest", but we reconstruct the autobuild tag
           # published=$(echo "$release" | jq -r .published_at)
@@ -87,7 +92,7 @@ jobs:
 
       - name: Create new release
         if: steps.check_release.outputs.already_exists == 'false'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.get_release.outputs.tag }}
           name: "${{ steps.get_release.outputs.title }} recompressed"
@@ -110,7 +115,7 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Install required software
         run: |
@@ -132,7 +137,7 @@ jobs:
           upx --ultra-brute -o "ffmpeg-master-${tag}-linux64-gpl-upx" "ffmpeg-master-${tag}-linux64-gpl-binary"
 
       - name: Create new release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.create_release.outputs.tag }}
           files: |
@@ -147,7 +152,7 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Install required software
         run: |
@@ -168,7 +173,7 @@ jobs:
           upx --ultra-brute -o "ffmpeg-master-${tag}-win64-gpl-upx.exe" "ffmpeg-master-${tag}-win64-gpl-binary.exe"
 
       - name: Create new release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.create_release.outputs.tag }}
           files: |

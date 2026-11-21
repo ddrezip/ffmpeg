@@ -11,7 +11,7 @@ The recompressed builds are published under the [**GitHub Releases**](https://gi
 
 ## Upstream
 
-Original releases are published by the upstream project: [BtbN’s FFmpeg-Builds upstream releases](https://github.com/BtbN/FFmpeg-Builds/releases)  
+Original releases are published by the upstream project: [BtbN’s FFmpeg-Builds upstream releases](https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases)  
 
 This repository does not modify the software itself, it only repackages existing upstream binaries.
 
